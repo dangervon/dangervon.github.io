@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Noto Serif SC:300,300italic,400,400italic,700,700italic|Lobster Two:300,300italic,400,400italic,700,700italic|EB Garamond:300,300italic,400,400italic,700,700italic|Source Code Pro:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/nextlib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="open virtual network下的逻辑流表及openflow流表分析方案">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OVN流表分析">
+<meta property="og:url" content="http://example.com/2021/11/16/OVN%E6%B5%81%E8%A1%A8%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="DangerZone">
+<meta property="og:description" content="open virtual network下的逻辑流表及openflow流表分析方案">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2021-11-16T06:36:31.000Z">
+<meta property="article:modified_time" content="2021-11-16T07:10:29.141Z">
+<meta property="article:author" content="dangervon">
+<meta property="article:tag" content="openflow">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2021/11/16/OVN%E6%B5%81%E8%A1%A8%E5%88%86%E6%9E%90/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en-US'
+  };
+</script>
+
+  <title>OVN流表分析 | DangerZone</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">DangerZone</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Linus Benedict Torvalds Once Said:Talk is Cheap,Show me the Code.That is true Correct!</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">2</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">1</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">2</span></a>
+
+  </li>
+        <li class="menu-item menu-item-schedule">
+
+    <a href="/schedule/" rel="section"><i class="fa fa-calendar fa-fw"></i>Schedule</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en-US">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/11/16/OVN%E6%B5%81%E8%A1%A8%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/header.png">
+      <meta itemprop="name" content="dangervon">
+      <meta itemprop="description" content="to be a better man">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="DangerZone">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          OVN流表分析
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2021-11-16 14:36:31 / Modified: 15:10:29" itemprop="dateCreated datePublished" datetime="2021-11-16T14:36:31+08:00">2021-11-16</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/openvswitch/" itemprop="url" rel="index"><span itemprop="name">openvswitch</span></a>
+                </span>
+            </span>
+
+          
+            <div class="post-description">open virtual network下的逻辑流表及openflow流表分析方案</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="流表概述"><a href="#流表概述" class="headerlink" title="流表概述"></a>流表概述</h1><h2 id="流表规则"><a href="#流表规则" class="headerlink" title="流表规则"></a>流表规则</h2><p>每条openflow流规则由一系列字段组成，分为基本字段、条件字段和动作字段三部分</p>
+<h3 id="基本字段"><a href="#基本字段" class="headerlink" title="基本字段"></a>基本字段</h3><p>基本字段包括生效时间duration_sec、所属表项table_id、优先级priority、处理的数据包数n_packets，空闲超时时间idle_timeout等，空闲超时时间idle_timeout以秒为单位，超过设置的空闲超时时间后该流规则将被自动删除，空闲超时时间设置为0表示该流规则永不过期，idle_timeout将不包含于ovs-ofctl dump-flows brname的输出中。</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>解析</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>cookie=value</td>
+<td>cookie字段有两种书写方式：cookie=value和cookie=value/mask。mask中对应位为1时cookie中值相应的位须严格匹配，为0时cookie中值对应的位通配，当mask为-1时，必须严格匹配cookie值。 在ovn中，如果cookie没有值时，表示不是直接从逻辑流表转换过来的</td>
+</tr>
+<tr>
+<td>duration=value</td>
+<td>流表生效时间，标识流表从下发到现在所持续的时间</td>
+</tr>
+<tr>
+<td>table=tableid</td>
+<td>流表所属表项，标识流表所属的表，默认为0</td>
+</tr>
+<tr>
+<td>priority=priority</td>
+<td>标识流表的优先级，范围为0-65535，值越大，优先级越高</td>
+</tr>
+<tr>
+<td>n_packets</td>
+<td>标识流表匹配包数</td>
+</tr>
+<tr>
+<td>n_bytes</td>
+<td>标识流表匹配字节数</td>
+</tr>
+<tr>
+<td>idle_timeout=sec</td>
+<td>流表空闲超时时间，流表会在空闲时间达到给定的时间时被删除。设置为0（默认值）时，流表不会因空闲时间被删除。</td>
+</tr>
+<tr>
+<td>hard_timeout=sec</td>
+<td>流表可存在的时间。设置此值后，流表会在到达给定时间后被删除。</td>
+</tr>
+<tr>
+<td>idle_age=sec</td>
+<td>流表空闲时间</td>
+</tr>
+<tr>
+<td>hard_age=sec</td>
+<td>流表存在时间。此字段与duration字段的区别在当流表被修改后，会重新设置hard_timer但是不会重置duration</td>
+</tr>
+</tbody></table>
+<h3 id="条件字段"><a href="#条件字段" class="headerlink" title="条件字段"></a>条件字段</h3><p>条件字段包括输入端口号in_port、源目的mac地址dl_src/dl_dst、源目的ip地址nw_src/nw_dst、数据包类型dl_type、网络层协议类型nw_proto等，可以为这些字段的任意组合，但在网络分层结构中底层的字段未给出确定值时上层的字段不允许给确定值，即一条流规则中允许底层协议字段指定为确定值，高层协议字段指定为通配符(不指定即为匹配任何值)，而不允许高层协议字段指定为确定值，而底层协议字段却为通配符(不指定即为匹配任何值)，否则，ovs-vswitchd 中的流规则将全部丢失，网络无法连接。</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>解析</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>in_port=port</td>
+<td>标识匹配接收数据包的端口号</td>
+</tr>
+<tr>
+<td>dl_vlan_pcp=priority</td>
+<td>匹配IEEE 802.1q优先码点(PCP)优先级，该优先级指定为0到7之间的值，包括0和7。更高的值表示更高的帧优先级。</td>
+</tr>
+<tr>
+<td>dl_type=ethertype</td>
+<td>匹配以太网协议类型ethertype，该类型指定为0到65535之间的整数，匹配数据包的二层协议类型，IP数据包为0x0800，IPv6数据包为0x86dd，ARP数据包为0x0806</td>
+</tr>
+<tr>
+<td>dl_src=xx:xx:xx:xx:xx:xx<br/>dl_dst=xx:xx:xx:xx:xx:xx</td>
+<td>匹配指定的链路层源或者目的MAC地址</td>
+</tr>
+<tr>
+<td>dl_src=xx:xx:xx:xx:xx:xx<br/>/xx:xx:xx:xx:xx:xx<br/>dl_dst=xx:xx:xx:xx:xx:xx<br/>/xx:xx:xx:xx:xx:xx</td>
+<td>匹配指定的链路层MAC地址，MAC地址格式为ADDR/MASK，当MASK值为01:00:00:00:00:00时，仅匹配多播位。当dl_dst=01:00:00:00:00:00/01:00:00:00:00:00时，匹配所有的组播报文和广播报文。dl_dst=00:00:00:00:00:00/01:00:00:00:00:00匹配所有的单播报文。</td>
+</tr>
+<tr>
+<td>nw_src=ip[/mask]<br/>nw_dst=ip[/mask]</td>
+<td>当dl_type=0x0800或指定ip时，匹配数据包的源、目的IP地址 当dl_type=0x0806或指定arp时，匹配ARP数据包的ar_spa或者ar_tpa字段</td>
+</tr>
+<tr>
+<td>dl_vlan=vlan</td>
+<td>匹配802.1Q类型（即vlan）数据包</td>
+</tr>
+<tr>
+<td>vlan_tci=tci[/mask]</td>
+<td>匹配修改后的VLAN TCI TCI。如果省略掩码，则tci就是要匹配的VLAN tci;如果指定了掩码，那么掩码中的1位表示tci中的对应位必须完全匹配，0位的通配符表示该位。</td>
+</tr>
+<tr>
+<td>nw_proto=proto</td>
+<td>匹配数据包协议类型。当dl_type=0x0800时，匹配IP协议族的协议，例如tcp，udp，icmp等<br/>当指定ip或dl_type=0x0800时，匹配ip协议类型proto, proto指定为0到255之间的十进制数(例如1匹配ICMP包或6匹配TCP包)。<br/>当指定ipv6或dl_type=0x86dd时，匹配ipv6报头类型proto，它被指定为0到255之间的十进制数(例如58匹配ICMPv6包或6匹配TCP)。<br/>当指定arp或dl_type=0x0806时，匹配arp操作码的较低8位。<br/>当指定rarp或dl_type=0x8035时，匹配ARP操作码的较低8位。</td>
+</tr>
+<tr>
+<td>nw_tos=tos</td>
+<td>匹配IP Tos/DSCP或者IPv6的tos字段，值为0-255</td>
+</tr>
+<tr>
+<td>nw_ecn=ecn</td>
+<td>匹配IP ToS或IPv6流量类字段中的ecn位，该字段指定为0到3之间的十进制数(包括3)。</td>
+</tr>
+<tr>
+<td>nw_ttl=ttl</td>
+<td>匹配IP TTL或IPv6跳限值TTL, TTL指定为0到255之间的小数，包括在内。</td>
+</tr>
+<tr>
+<td>tp_src=port<br/>tp_dst=port</td>
+<td>若指定了udp或者tcp协议，则匹配udp/tcp的端口号</td>
+</tr>
+<tr>
+<td>icmp_type=type<br/>icmp_code=code</td>
+<td>若指定了icmp或者icmpv6协议，则匹配对应的icmp 类型或者code字段</td>
+</tr>
+<tr>
+<td>table=number</td>
+<td>如果指定，则限制流操作和流转储命令仅应用于给定数字在0到254之间的表。</td>
+</tr>
+<tr>
+<td>ip_frag=frag_type</td>
+<td>当dl_type指定为IP或者IPv6，frag_type指定匹配的IP分片包或者非分片包的匹配 frag_type支持的值为：<br/>no: 仅匹配非分片报文<br/>yes：匹配所有分片报文<br/>first：仅匹配offset为0的分片报文<br/>later：仅匹配offset非0的分片报文<br/>not_later：匹配非分片报文和offset为0的分片报文</td>
+</tr>
+<tr>
+<td>arp_sha=xx:xx:xx:xx:xx:xx<br/>arp_tha=xx:xx:xx:xx:xx:xx</td>
+<td>当设置dl_type为ARP或者RARP，则arp_sha和arp_tha匹配数据包的源、目的MAC地址</td>
+</tr>
+<tr>
+<td>tun_id=tunnel-id[/mask]</td>
+<td>匹配隧道标识符–隧道id。只有通过带有密钥的隧道到达的数据包(例如带有RFC 2890密钥扩展名和非零密钥值的GRE)才具有非零的隧道ID。</td>
+</tr>
+</tbody></table>
+<p>以下是一些匹配项的速记符</p>
+<table>
+<thead>
+<tr>
+<th>速记符</th>
+<th>匹配项</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ip</td>
+<td>dl_type=0x800</td>
+</tr>
+<tr>
+<td>ipv6</td>
+<td>dl_type=0x86dd</td>
+</tr>
+<tr>
+<td>icmp</td>
+<td>dl_type=0x0800,nw_proto=1</td>
+</tr>
+<tr>
+<td>mplsm</td>
+<td>dl_type=0x8848</td>
+</tr>
+<tr>
+<td>mpls</td>
+<td>dl_type=0x8847</td>
+</tr>
+<tr>
+<td>rarp</td>
+<td>dl_type=0x8035</td>
+</tr>
+<tr>
+<td>arp</td>
+<td>dl_type=0x0806</td>
+</tr>
+<tr>
+<td>sctp6</td>
+<td>dl_type=0x86dd,nw_proto=132</td>
+</tr>
+<tr>
+<td>sctp</td>
+<td>dl_type=0x0800,nw_proto=132</td>
+</tr>
+<tr>
+<td>udp6</td>
+<td>dl_type=0x86dd,nw_proto=17</td>
+</tr>
+<tr>
+<td>udp</td>
+<td>dl_type=0x0800,nw_proto=17</td>
+</tr>
+<tr>
+<td>tcp6</td>
+<td>dl_type=0x86dd,nw_proto=6</td>
+</tr>
+<tr>
+<td>tcp</td>
+<td>dl_type=0x0800,nw_proto=6</td>
+</tr>
+<tr>
+<td>icmp6</td>
+<td>dl_type=0x86dd,nw_proto=58</td>
+</tr>
+</tbody></table>
+<h3 id="动作字段"><a href="#动作字段" class="headerlink" title="动作字段"></a>动作字段</h3><p>动作字段包括正常转发normal、定向到某交换机端口output：port、丢弃drop、更改源目的mac地址mod_dl_src/mod_dl_dst等，一条流规则可有多个动作，动作执行按指定的先后顺序依次完成。</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>解析</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>output:port</td>
+<td>将数据包从port接口发送</td>
+</tr>
+<tr>
+<td>output:src[start..end]</td>
+<td>将包输出到从src读取的OpenFlow端口号,该src是NXM字段所包含数据。例如：output:NXM_NX_REG0[16..31],表示输出端口号是从NXM_NX_REG0寄存器的16-31为中读取的数据</td>
+</tr>
+<tr>
+<td>enqueue:port:queue</td>
+<td>将数据包入队到指定端口的指定队列里</td>
+</tr>
+<tr>
+<td>normal</td>
+<td>将数据包按照设备上的正常L2/L3层处理方式进行处理</td>
+</tr>
+<tr>
+<td>flood</td>
+<td>将数据包发送到交换机上除接收接口和禁止flood的接口外的所有接口</td>
+</tr>
+<tr>
+<td>all</td>
+<td>将数据包发送到除接收接口外的所有接口</td>
+</tr>
+<tr>
+<td>controller(key=value…)</td>
+<td>将数据包作为PACKET IN消息发送到OpenFlow控制器。<br/>支持的键值对：<br/>max_len=nbytes：限制发送到控制器的数据包长度字节数，默认情况是发送整个数据包；<br/>reason=reason：在PACKET IN消息中指明发送消息的原因，支持的reason为action(default)，no_match和invalid_ttl;<br/>id=controller-id：指明控制器ID</td>
+</tr>
+<tr>
+<td>in_port</td>
+<td>将数据包从接收的接口发送出去</td>
+</tr>
+<tr>
+<td>drop</td>
+<td>丢弃数据包</td>
+</tr>
+<tr>
+<td>mod_vlan_vid:vlan_vid</td>
+<td>修改数据包的vlan id</td>
+</tr>
+<tr>
+<td>mod_vlan_pcp:vlan_pcp</td>
+<td>vlan_pcp 修改数据包的vlan priority</td>
+</tr>
+<tr>
+<td>strip_vlan</td>
+<td>如果数据包中存在vlan tag，则剥离vlan tag</td>
+</tr>
+<tr>
+<td>push_vlan:ethertype</td>
+<td>为数据包添加新的vlan tag</td>
+</tr>
+<tr>
+<td>push_mpls:ethertype</td>
+<td>如果包还没有包含任何MPLS标签，则将包的Ethertype更改为Ethertype，它必须是MPLS单播Ethertype 0x8847或MPLS多播Ethertype 0x8848，然后推送一个初始标签堆栈条目。</td>
+</tr>
+<tr>
+<td>pop_mpls:ethertype</td>
+<td>去掉最外层的MPLS标签堆栈条目</td>
+</tr>
+<tr>
+<td>mod_dl_src:mac</td>
+<td>设置数据包的源MAC地址</td>
+</tr>
+<tr>
+<td>mod_dl_dst:mac</td>
+<td>设置数据包的目的MAC地址</td>
+</tr>
+<tr>
+<td>mod_nw_src:ip</td>
+<td>设置数据包的源IP地址</td>
+</tr>
+<tr>
+<td>mod_nw_dst:ip</td>
+<td>设置数据包的目的IP地址</td>
+</tr>
+<tr>
+<td>mod_tp_src:port</td>
+<td>设置TCP或者UDP的源端口</td>
+</tr>
+<tr>
+<td>mod_tp_dst:port</td>
+<td>设置TCP或UDP的目的端口</td>
+</tr>
+<tr>
+<td>mod_nw_tos:tos</td>
+<td>将IPv4 ToS/DSCP字段设置为ToS，该字段必须是0到255之间的4的倍数。</td>
+</tr>
+<tr>
+<td>resubmit([port],[table])</td>
+<td>第一个参数：使用端口替换in_port字段(如果指定了端口)，重第二个参数：重新指定流表，搜索这个OpenFlow流表(或表指定其编号的表)</td>
+</tr>
+<tr>
+<td>set_tunnel:id<br/>set_tunnel64:id</td>
+<td>如果输出到将包封装在隧道中并支持标识符(如GRE)的端口，则将标识符设置为id。</td>
+</tr>
+<tr>
+<td>set_queue:queue</td>
+<td>设置输出包时应用于排队的队列。</td>
+</tr>
+<tr>
+<td>pop_queue</td>
+<td>将队列恢复到应用任何set_queue操作之前的值。</td>
+</tr>
+<tr>
+<td>dec_ttl<br/>dec_ttl[(id1,id2)]</td>
+<td>减少IPv4包或跳限制的IPv6包的TTL。</td>
+</tr>
+<tr>
+<td>set_mpls_ttl:ttl</td>
+<td>设置包的外部MPLS标签堆栈条目的TTL。ttl应该在0到255之间(包括255)。</td>
+</tr>
+<tr>
+<td>dec_mpls_ttl</td>
+<td>外部MPLS标签栈的TTL递减</td>
+</tr>
+<tr>
+<td>move:src[start..end]−&gt;dst[start..end]</td>
+<td>将指定的位从字段src复制到字段dst。src和dst必须是nicira−ext.h中定义的NXM字段名,例如NXM_OF_UDP_SRC 或者 NXM_NX_REG0.<br/>例如：<br/>move:NXM_NX_REG0 [0 . . 5]−&gt; NXM_NX_REG1 [26 . .31]将寄存器0中编号为0到5(含5)的6位拷贝到寄存器26到31(含31)中;<br/>move:NXM_NX_REG0 [0 . .15]−&gt;NXM_OF_VLAN_TCI[]将寄存器0中最不重要的16位复制到VLAN TCI字段中。</td>
+</tr>
+<tr>
+<td>load:value−&gt;dst[start..end]</td>
+<td>写值value到dst指定位置（从start位到end位），例如：load:55−&gt;NXM_NX_REG2[0..5] 就是将55写入NAX_NX_REG2[0..5],数据存放位数为6位，110111</td>
+</tr>
+<tr>
+<td>push:src[start..end]</td>
+<td>从开始到结束的比特包括在内，均存放在栈顶的字段中。<br/>例如:push:NXM_NX_REG2 [0 . .5]将存储在寄存器2中从0到5(含5位)中的值推送到内部堆栈。</td>
+</tr>
+<tr>
+<td>pop:dst[start..end]</td>
+<td>从堆栈顶部弹出，从弹出的值中检索包含开始到结束的位，并将它们存储到dst中相应的位。<br/>例如:pop:NXM_NX_REG2 [0 . .5]从堆栈顶部弹出值。设置寄存器2从0到5，将栈顶数据存放到该寄存器0-5。</td>
+</tr>
+<tr>
+<td>set_field:value−&gt;dst</td>
+<td>将文字值写入dst字段，该字段应指定为用于匹配的名称。<br/>例如: set_field:fe80:0123:4567:890a:a6ba:dbff:fefe:59fa−&gt;ipv6_src</td>
+</tr>
+<tr>
+<td>learn(argument[,argument]…)</td>
+<td>此操作在OpenFlow表中添加或修改一个流，类似于ovs−ofctl−strict mod−flow。参数指定流的匹配字段、操作和其他属性，如下所示：<br/>idle_timeout=seconds<br/>hard_timeout=seconds<br/>priority=value<br/>这些键值对的含义与通常的ovs - ofctl流语法中的含义相同<br/>fin_idle_timeout=seconds<br/>fin_hard_timeout=seconds<br/>将带有指定参数的fin_timeout操作添加到新流。<br/>table=number<br/>应该插入新流的表。指定一个0到254之间的小数。如果表未指定，则默认为表1<br/>field=value<br/>field[start..end]=src[start..end]<br/>field[start..end]<br/>向新流添加匹配条件<br/>load:value−&gt;dst[start..end]<br/>load:src[start..end]−&gt;dst[start..end]<br/>向新流添加加载操作。<br/>output:field[start..end]<br/>将输出操作添加到新流的操作中，该操作将输出到从字段[start..]获取的OpenFlow端口。end]，它必须是上面描述的NXM字段</td>
+</tr>
+<tr>
+<td>local</td>
+<td>一般是转发给本地网桥，ovs-ofctl add-flow br0 in_port=1,actions=local</td>
+</tr>
+</tbody></table>
+<h2 id="流表分析"><a href="#流表分析" class="headerlink" title="流表分析"></a>流表分析</h2><p>**table 0 **</p>
+<p>完成物理到逻辑的翻译，将逻辑信息，比如上面提到的信息记录到寄存器中。</p>
+<p>VM中的容器的报文用VLAN进行区分</p>
+<p>别的chassis过来的报文，根据入端口和tunnel_id进行区分，然后获取出端口，这个在封装的时候已经有了</p>
+<p>**table 16-31 **</p>
+<p>主要是将逻辑流表ingress pipeline 0-15 的操作部分转换为openflow流表，主要工作如下</p>
+<p>每个逻辑流表会映射一个或者多个openflow流表，通常报文只是匹配其中一条流表。</p>
+<p>ovn-controller使用逻辑流表的UUID的前32位作为openflow流表的cookie值。查看逻辑流表的UUID使用ovn-sbctl list Logical_Flow，对应上面cookie的逻辑流表的UUID的信息在这里。</p>
+<p>一些逻辑流表可以映射到ovs的”conjunctive match”扩展名(参见这里)，这时候因为一条openflow流表对应了多条逻辑流表，所以cookie为0。这里的”conjunctive match”表示一个集合的匹配，比如tcp_src ∈ {80, 443, 8080} and tcp_dst ∈ {80, 443, 8080}。</p>
+<p>一些逻辑流表可能不会转换成openflow流表，如果交换机上虚拟接口没有添加到ovs中，添加命令ovs-vsctl set Interface veth2_b external_ids:iface-id=ls2-vm4，那么相应的openflow流表将不会生成。</p>
+<p>最后就是有一些逻辑流表和openflow流表很明显的对应操作关系，我们列一下</p>
+<p>next对应resubmit</p>
+<p>field = constant对应set_field</p>
+<p>output，将报文resubmit到表32，如果逻辑流表有多个output操作，那么每个都要resubmit到表32。</p>
+<p>get_arp(P, A)和get_nd(P, A)，通过讲参数存储在openflow字段中(上面例子中存储在NXM_NX_REG0，流表cookie=0x5dbc664)，然后resubmit到表66，然后ovn-controller从MAC_Binding表生成流填充，如果表66中有匹配项，其action将绑定的MAC存储在目的MAC地址字段中</p>
+<p>put_arp(P, A, E)和put_nd(P, A, E)讲参数存储到openflow的字段中(字段太多，查看上面流表cookie=0x92af5d1c)，然后更新MAC_Binding表中。</p>
+<p>**table 32-47 **</p>
+<p>主要是将逻辑流表ingress pipeline的output action转换为openflow流表。以下详细介绍下：</p>
+<p><strong>table32</strong></p>
+<p>主要是处理到其他宿主机中虚拟机的报文，讲VNI设置到metadata，然后resubmit到表33</p>
+<p><strong>table33</strong></p>
+<p>主要是将报文resubmit到table34，对于多个逻辑output端口的时候，需要改为每个逻辑端口P，然后resubmit到表34</p>
+<p><strong>table34</strong></p>
+<p>检查报文的逻辑ingress和egress的端口是否一致，一致则丢弃。剩下的resubmit到表48</p>
+<p>**table 48-63 **</p>
+<p>主要是讲逻辑流表的egress pipeline部分转换成openflow流表，这块属于报文发送之前的最后验证，最终resubmit到表64，最终没有执行output的报文将被丢弃。</p>
+<p>**table 64 **</p>
+<p>貌似和loopback有关，修改逻辑入端口。</p>
+<p><strong>table 65</strong></p>
+<p> 逻辑到物理的转换，和表0相反，主要是将找到逻辑端口对应的物理端口，然后发送，如果虚拟机中还有容器的话，需要添加vlan头。</p>
+<p>**table 66 **</p>
+<p>主要是对应MAC_Binding中的数据，来修改目的IP对应的目的MAC，功能类似arp。</p>
+<h2 id="寄存器"><a href="#寄存器" class="headerlink" title="寄存器"></a>寄存器</h2><h3 id="寄存器意义"><a href="#寄存器意义" class="headerlink" title="寄存器意义"></a>寄存器意义</h3><table>
+<thead>
+<tr>
+<th>寄存器</th>
+<th>功能</th>
+<th>详解</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>metadata</td>
+<td>作为vni使用</td>
+<td>是ovn的Logical Datapath Field，命令ovn-sbctl list Datapath_Binding查看tunnel_key，封装到geneve或者stt中</td>
+</tr>
+<tr>
+<td>reg14</td>
+<td>记录逻辑入端口</td>
+<td>是ovn的Logical InputPort Field，命令ovn-sbctl list Port_Binding查看tunnel_key，封装到geneve或者stt中</td>
+</tr>
+<tr>
+<td>reg15</td>
+<td>记录逻辑出端口</td>
+<td>是ovn的Logical OutputPort Field，命令ovn-sbctl list Port_Binding查看tunnel_key，封装到geneve或者stt中</td>
+</tr>
+<tr>
+<td>reg13</td>
+<td>逻辑端口的conntrack zone</td>
+<td>chassis内部有用，出了chassis无用，conntrack连接追踪</td>
+</tr>
+<tr>
+<td>reg12</td>
+<td>SNAT的conntrack zone</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>reg11</td>
+<td>DNAT的conntrack zone</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>reg10</td>
+<td>逻辑流表标志</td>
+<td>可能是逻辑流表中的flags.loopback之类的标志</td>
+</tr>
+</tbody></table>
+<h3 id="常用NXM字段"><a href="#常用NXM字段" class="headerlink" title="常用NXM字段"></a>常用NXM字段</h3><p>什么是NXM字段，也叫做扩展字段</p>
+<table>
+<thead>
+<tr>
+<th>NXM字段</th>
+<th align="left">报文字段</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>NXM_OF_ETH_SRC</td>
+<td align="left">源MAC</td>
+</tr>
+<tr>
+<td>NXM_OF_ETH_DST</td>
+<td align="left">目的MAC</td>
+</tr>
+<tr>
+<td>NXM_OF_ETH_TYPE</td>
+<td align="left">以太网类型</td>
+</tr>
+<tr>
+<td>NXM_OF_SCTP_DST</td>
+<td align="left">SCTP目的端口</td>
+</tr>
+<tr>
+<td>NXM_OF_SCTP_SRC</td>
+<td align="left">SCTP源端口</td>
+</tr>
+<tr>
+<td>NXM_OF_UDP_DST</td>
+<td align="left">UDP目的端口</td>
+</tr>
+<tr>
+<td>NXM_OF_UDP_SRC</td>
+<td align="left">UDP源端口</td>
+</tr>
+<tr>
+<td>NXM_OF_TCP_DST</td>
+<td align="left">TCP目的端口</td>
+</tr>
+<tr>
+<td>NXM_OF_TCP_SRC</td>
+<td align="left">TCP源端口</td>
+</tr>
+<tr>
+<td>NXM_OF_IP_DST</td>
+<td align="left">目的IP</td>
+</tr>
+<tr>
+<td>NXM_OF_IP_SRC</td>
+<td align="left">源IP</td>
+</tr>
+<tr>
+<td>NXM_NX_IP_ECN</td>
+<td align="left">IP ToS ECN</td>
+</tr>
+<tr>
+<td>NXM_OF_IP_TOS</td>
+<td align="left">IP ToS值</td>
+</tr>
+<tr>
+<td>NXM_OF_IP_PROTO</td>
+<td align="left">IP协议号</td>
+</tr>
+<tr>
+<td>NXM_OF_VLAN_TCI</td>
+<td align="left">vid</td>
+</tr>
+</tbody></table>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>dangervon
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="http://example.com/2021/11/16/OVN%E6%B5%81%E8%A1%A8%E5%88%86%E6%9E%90/" title="OVN流表分析">http://example.com/2021/11/16/OVN流表分析/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/openflow/" rel="tag"># openflow</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/11/16/Neutron%E4%B8%8B%E7%9A%84ACL%E8%A7%84%E5%88%99%E5%88%97%E8%A1%A8/" rel="prev" title="Neutron下的ACL规则列表">
+      <i class="fa fa-chevron-left"></i> Neutron下的ACL规则列表
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B5%81%E8%A1%A8%E6%A6%82%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">流表概述</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B5%81%E8%A1%A8%E8%A7%84%E5%88%99"><span class="nav-number">1.1.</span> <span class="nav-text">流表规则</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%BA%E6%9C%AC%E5%AD%97%E6%AE%B5"><span class="nav-number">1.1.1.</span> <span class="nav-text">基本字段</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9D%A1%E4%BB%B6%E5%AD%97%E6%AE%B5"><span class="nav-number">1.1.2.</span> <span class="nav-text">条件字段</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%A8%E4%BD%9C%E5%AD%97%E6%AE%B5"><span class="nav-number">1.1.3.</span> <span class="nav-text">动作字段</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B5%81%E8%A1%A8%E5%88%86%E6%9E%90"><span class="nav-number">1.2.</span> <span class="nav-text">流表分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">1.3.</span> <span class="nav-text">寄存器</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%84%E5%AD%98%E5%99%A8%E6%84%8F%E4%B9%89"><span class="nav-number">1.3.1.</span> <span class="nav-text">寄存器意义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B8%B8%E7%94%A8NXM%E5%AD%97%E6%AE%B5"><span class="nav-number">1.3.2.</span> <span class="nav-text">常用NXM字段</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="dangervon"
+      src="/images/header.png">
+  <p class="site-author-name" itemprop="name">dangervon</p>
+  <div class="site-description" itemprop="description">to be a better man</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">2</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/dangervon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;dangervon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:cemicircle@gmail.com" title="E-Mail → mailto:cemicircle@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">dangervon</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/nextlib/anime.min.js"></script>
+  <script src="/nextlib/velocity/velocity.min.js"></script>
+  <script src="/nextlib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
