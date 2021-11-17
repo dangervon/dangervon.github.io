@@ -27,14 +27,14 @@
 <meta property="og:site_name" content="DangerZone">
 <meta property="og:description" content="Linux系统下的&#x2F;etc&#x2F;fstab文件是文件系统挂载的入口点，理解文件的结构和含义将有助于我们理解Linux的文件挂载系统">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="http://dangervon.github.io/2021/11/17/Linux%E4%B8%8Bfstab%E6%96%87%E4%BB%B6%E7%9A%84%E8%AF%A6%E8%A7%A3/Linux%E4%B8%8Bfstab%E6%96%87%E4%BB%B6%E7%9A%84%E8%AF%A6%E8%A7%A3/1.png">
-<meta property="og:image" content="http://dangervon.github.io/2021/11/17/Linux%E4%B8%8Bfstab%E6%96%87%E4%BB%B6%E7%9A%84%E8%AF%A6%E8%A7%A3/Linux%E4%B8%8Bfstab%E6%96%87%E4%BB%B6%E7%9A%84%E8%AF%A6%E8%A7%A3/2.png">
+<meta property="og:image" content="https://s3.us-west-2.amazonaws.com/secure.notion-static.com/e31d129b-4405-4502-94cf-d0e74fda8ef5/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAT73L2G45EIPT3X45/20211117/us-west-2/s3/aws4_request&X-Amz-Date=20211117T014126Z&X-Amz-Expires=86400&X-Amz-Signature=733ddb90593bfa546f73c8c63a58cf6154deba40284185cd267dd249da6e0a94&X-Amz-SignedHeaders=host&response-content-disposition=filename%20=%22Untitled.png%22">
+<meta property="og:image" content="https://s3.us-west-2.amazonaws.com/secure.notion-static.com/9591a8eb-24bd-439d-81be-3c8adb6d8ddf/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAT73L2G45EIPT3X45/20211117/us-west-2/s3/aws4_request&X-Amz-Date=20211117T014101Z&X-Amz-Expires=86400&X-Amz-Signature=c05e29bda87a2ebe0175eaf684bff5649dd9353a4955589678b455ac38589f08&X-Amz-SignedHeaders=host&response-content-disposition=filename%20=%22Untitled.png%22">
 <meta property="article:published_time" content="2021-11-17T01:11:52.000Z">
-<meta property="article:modified_time" content="2021-11-17T01:48:16.897Z">
+<meta property="article:modified_time" content="2021-11-17T02:03:29.728Z">
 <meta property="article:author" content="dangervon">
 <meta property="article:tag" content="linux">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="http://dangervon.github.io/2021/11/17/Linux%E4%B8%8Bfstab%E6%96%87%E4%BB%B6%E7%9A%84%E8%AF%A6%E8%A7%A3/Linux%E4%B8%8Bfstab%E6%96%87%E4%BB%B6%E7%9A%84%E8%AF%A6%E8%A7%A3/1.png">
+<meta name="twitter:image" content="https://s3.us-west-2.amazonaws.com/secure.notion-static.com/e31d129b-4405-4502-94cf-d0e74fda8ef5/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAT73L2G45EIPT3X45/20211117/us-west-2/s3/aws4_request&X-Amz-Date=20211117T014126Z&X-Amz-Expires=86400&X-Amz-Signature=733ddb90593bfa546f73c8c63a58cf6154deba40284185cd267dd249da6e0a94&X-Amz-SignedHeaders=host&response-content-disposition=filename%20=%22Untitled.png%22">
 
 <link rel="canonical" href="http://dangervon.github.io/2021/11/17/Linux%E4%B8%8Bfstab%E6%96%87%E4%BB%B6%E7%9A%84%E8%AF%A6%E8%A7%A3/">
 
@@ -200,7 +200,7 @@
               <span class="post-meta-item-text">Posted on</span>
               
 
-              <time title="Created: 2021-11-17 09:11:52 / Modified: 09:48:16" itemprop="dateCreated datePublished" datetime="2021-11-17T09:11:52+08:00">2021-11-17</time>
+              <time title="Created: 2021-11-17 09:11:52 / Modified: 10:03:29" itemprop="dateCreated datePublished" datetime="2021-11-17T09:11:52+08:00">2021-11-17</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -208,7 +208,7 @@
               </span>
               <span class="post-meta-item-text">In</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/linux/" itemprop="url" rel="index"><span itemprop="name">linux</span></a>
+                  <a href="/categories/linux-operating-system/" itemprop="url" rel="index"><span itemprop="name">linux_operating_system</span></a>
                 </span>
             </span>
 
@@ -234,10 +234,10 @@
 <p>挂载，指的就是将设备文件中的顶级目录连接到 Linux 根目录下的某一目录（最好是空目录），访问此目录就等同于访问设备文件。</p>
 <p>纠正一个误区，并不是根目录下任何一个目录都可以作为挂载点，由于挂载操作会使得原有目录中文件被隐藏，因此根目录以及系统原有目录都不要作为挂载点，会造成系统异常甚至崩溃，挂载点最好是新建的空目录。</p>
 <p>举个例子，我们想通过命令行访问某个 U 盘中的数据，下图 所示为 U 盘文件目录结构和 Linux 系统中的文件目录结构。</p>
-<p><img src="Linux%E4%B8%8Bfstab%E6%96%87%E4%BB%B6%E7%9A%84%E8%AF%A6%E8%A7%A3/1.png" alt="Linux下fstab文件的详解/1.png"></p>
+<p><img src="https://s3.us-west-2.amazonaws.com/secure.notion-static.com/e31d129b-4405-4502-94cf-d0e74fda8ef5/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAT73L2G45EIPT3X45/20211117/us-west-2/s3/aws4_request&X-Amz-Date=20211117T014126Z&X-Amz-Expires=86400&X-Amz-Signature=733ddb90593bfa546f73c8c63a58cf6154deba40284185cd267dd249da6e0a94&X-Amz-SignedHeaders=host&response-content-disposition=filename%20=%22Untitled.png%22" alt="Linux文件目录结构"></p>
 <p>从上图可以看到，目前 U 盘和 Linux 系统文件分属两个文件系统，还无法使用命令行找到 U 盘文件，需要将两个文件系统进行挂载。</p>
 <p>接下来，我们在根目录下新建一个目录 /sdb-u，通过挂载命令将 U 盘文件系统挂载到此目录，挂载效果如下图所示：</p>
-<p><img src="Linux%E4%B8%8Bfstab%E6%96%87%E4%BB%B6%E7%9A%84%E8%AF%A6%E8%A7%A3/2.png" alt="Linux下fstab文件的详解/2.png"></p>
+<p><img src="https://s3.us-west-2.amazonaws.com/secure.notion-static.com/9591a8eb-24bd-439d-81be-3c8adb6d8ddf/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAT73L2G45EIPT3X45/20211117/us-west-2/s3/aws4_request&X-Amz-Date=20211117T014101Z&X-Amz-Expires=86400&X-Amz-Signature=c05e29bda87a2ebe0175eaf684bff5649dd9353a4955589678b455ac38589f08&X-Amz-SignedHeaders=host&response-content-disposition=filename%20=%22Untitled.png%22" alt="U盘挂载目录"></p>
 <p>可以看到，U 盘文件系统已经成为 Linux 文件系统目录的一部分，此时访问 /sdb-u/ 就等同于访问 U 盘。</p>
 <p>前面讲过，根目录下的 /dev/ 目录文件负责所有的硬件设备文件，事实上，当 U 盘插入 Linux 后，系统也确实会给 U 盘分配一个目录文件（比如 sdb1），就位于 /dev/ 目录下（/dev/sdb1），但无法通过 /dev/sdb1/ 直接访问 U 盘数据，访问此目录只会提供给你此设备的一些基本信息（比如容量）。</p>
 <p>总之，Linux 系统使用任何硬件设备，都必须将设备文件与已有目录文件进行挂载。</p>
