@@ -200,10 +200,10 @@
 <p>挂载，指的就是将设备文件中的顶级目录连接到 Linux 根目录下的某一目录（最好是空目录），访问此目录就等同于访问设备文件。</p>
 <p>纠正一个误区，并不是根目录下任何一个目录都可以作为挂载点，由于挂载操作会使得原有目录中文件被隐藏，因此根目录以及系统原有目录都不要作为挂载点，会造成系统异常甚至崩溃，挂载点最好是新建的空目录。</p>
 <p>举个例子，我们想通过命令行访问某个 U 盘中的数据，下图 所示为 U 盘文件目录结构和 Linux 系统中的文件目录结构。</p>
-<p><img src="https://s3.us-west-2.amazonaws.com/secure.notion-static.com/e31d129b-4405-4502-94cf-d0e74fda8ef5/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAT73L2G45EIPT3X45/20211117/us-west-2/s3/aws4_request&X-Amz-Date=20211117T014126Z&X-Amz-Expires=86400&X-Amz-Signature=733ddb90593bfa546f73c8c63a58cf6154deba40284185cd267dd249da6e0a94&X-Amz-SignedHeaders=host&response-content-disposition=filename%20=%22Untitled.png%22" alt="Linux文件目录结构"></p>
+<p><img src="https://raw.githubusercontent.com/dangervon/cloudpicture/main/linux_fstab_1.png" alt="Linux文件目录结构"></p>
 <p>从上图可以看到，目前 U 盘和 Linux 系统文件分属两个文件系统，还无法使用命令行找到 U 盘文件，需要将两个文件系统进行挂载。</p>
 <p>接下来，我们在根目录下新建一个目录 /sdb-u，通过挂载命令将 U 盘文件系统挂载到此目录，挂载效果如下图所示：</p>
-<p><img src="https://s3.us-west-2.amazonaws.com/secure.notion-static.com/9591a8eb-24bd-439d-81be-3c8adb6d8ddf/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAT73L2G45EIPT3X45/20211117/us-west-2/s3/aws4_request&X-Amz-Date=20211117T014101Z&X-Amz-Expires=86400&X-Amz-Signature=c05e29bda87a2ebe0175eaf684bff5649dd9353a4955589678b455ac38589f08&X-Amz-SignedHeaders=host&response-content-disposition=filename%20=%22Untitled.png%22" alt="U盘挂载目录"></p>
+<p><img src="https://raw.githubusercontent.com/dangervon/cloudpicture/main/linux_fstab_2.png" alt="U盘挂载目录"></p>
 <p>可以看到，U 盘文件系统已经成为 Linux 文件系统目录的一部分，此时访问 /sdb-u/ 就等同于访问 U 盘。</p>
 <p>前面讲过，根目录下的 /dev/ 目录文件负责所有的硬件设备文件，事实上，当 U 盘插入 Linux 后，系统也确实会给 U 盘分配一个目录文件（比如 sdb1），就位于 /dev/ 目录下（/dev/sdb1），但无法通过 /dev/sdb1/ 直接访问 U 盘数据，访问此目录只会提供给你此设备的一些基本信息（比如容量）。</p>
 <p>总之，Linux 系统使用任何硬件设备，都必须将设备文件与已有目录文件进行挂载。</p>
